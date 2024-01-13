@@ -1,7 +1,6 @@
-import 'package:appinio_video_player/appinio_video_player.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:tiktok_clone/widget/widget.dart';
+import 'package:video_player/video_player.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,13 +9,19 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  late CustomVideoPlayerController _customVideoPlayerController;
-  late VideoPlayerController _videoPlayerController;
-
-  String videoUrl =
-      "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  // late VideoPlayerController _controller;
+  List<VideoPlayerController> listVideoController = [];
+  List<String> videoList = [
+    'assets/video/dance.mp4',
+    'assets/video/He_made_her_day!.mp4',
+    'assets/video/mydemon.mp4',
+    'assets/video/satisfying.mp4',
+    'assets/video/short.mp4',
+  ];
   PageController controller = PageController();
+  AnimationController? _animationController;
   List<String> imageUrlList = [
     'https://img.freepik.com/free-photo/portrait-young-woman-with-natural-make-up_23-2149084942.jpg',
     'https://img.freepik.com/free-photo/young-female-model-portrait_23-2149084889.jpg?size=626&ext=jpg&ga=GA1.1.386372595.1698019200&semt=ais',
@@ -27,15 +32,29 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    _videoPlayerController = VideoPlayerController.network(
-        'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4')
-      ..initialize().then((value) => setState(() {}));
-    _customVideoPlayerController = CustomVideoPlayerController(
-      context: context,
-      videoPlayerController: _videoPlayerController,
-    );
+    _animationController =
+        AnimationController(vsync: this, duration: const Duration(seconds: 5));
+    _animationController!.repeat();
+    for (var vdo in videoList) {
+      VideoPlayerController? controller = VideoPlayerController.asset(vdo)
+        ..initialize().then((_) {
+          // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
+          setState(() {});
+        });
+      //  controller.play();
+      listVideoController.add(controller);
+      //_controller.setLooping(true);
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    for (var dp in listVideoController) {
+      dp.dispose();
+    }
+    _animationController!.dispose();
   }
 
   @override
@@ -43,20 +62,28 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // TiktokWidget().videoPlayerWidget(
-          //     customVideoPlayerController: _customVideoPlayerController),
-          PageView(
+          PageView.builder(
+            itemCount: videoList.length,
+            itemBuilder: (context, index) {
+              var controlerData = listVideoController[index];
+              controlerData
+                ..play()
+                ..videoPlayerOptions
+                ..setLooping(true);
+
+              return TiktokWidget().pageviewWidget(
+                context,
+                imageUrl: imageUrlList[index],
+                animationController: _animationController,
+                controller: controlerData,
+              );
+            },
             controller: controller,
             scrollDirection: Axis.vertical,
-            children: List.generate(
-              imageUrlList.length,
-              (index) =>
-                  TiktokWidget().pageviewWidget(imageUrl: imageUrlList[index]),
-            ),
           ),
           Positioned(
               width: 400,
-              top: 30,
+              top: 50,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Row(
@@ -96,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
         BottomNavigationBarItem(
           backgroundColor: Colors.black,
           icon: Icon(Icons.group),
-          label: 'friend',
+          label: 'Friend',
         ),
         BottomNavigationBarItem(
             backgroundColor: Colors.black, icon: Icon(Icons.add), label: 'Add'),
